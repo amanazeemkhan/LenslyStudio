@@ -24,7 +24,7 @@ A premium, browser-based virtual photo booth built with React. LenslyStudio prov
 
 1. Clone the repository:
    ```bash
-   git clone [https://github.com/amanazeemkhan/LenslyStudio.git](https://github.com/amanazeemkhan/LenslyStudio.git)
+   git clone https://github.com/amanazeemkhan/LenslyStudio.git
    ```
 2. Install dependencies:
    ```bash
