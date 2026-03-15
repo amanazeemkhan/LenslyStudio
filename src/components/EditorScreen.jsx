@@ -10,7 +10,7 @@ export default function EditorScreen({ images, layout, setLayout, elements, setE
   const [activeElementId, setActiveElementId] = useState(null);
   const [postFilter, setPostFilter] = useState(FILTERS[0]); // For editing filter post-capture
   const [layoutBg, setLayoutBg] = useState('#ffffff');
-  const [watermarkText, setWatermarkText] = useState('📸 SnapBooth');
+  const [watermarkText, setWatermarkText] = useState('📸 LenslyStudio');
 
   const currentLayoutConfig = LAYOUT_CONFIG[layout];
 

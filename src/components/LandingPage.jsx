@@ -17,7 +17,7 @@ export default function LandingPage({ onStart }) {
       <nav className="relative z-10 flex justify-between items-center p-6 lg:px-12">
         <div className="flex items-center gap-2 text-2xl font-bold tracking-tighter">
           <Aperture className="text-pink-400" size={32} />
-          <span>Snap<span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-orange-400">Booth</span></span>
+          <span>Lensly<span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-orange-400">Studio</span></span>
         </div>
         <div className="hidden md:flex gap-6 font-medium text-white/80">
           <button onClick={() => setActiveModal('how')} className="hover:text-white transition-colors">How It Works</button>
