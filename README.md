@@ -1,16 +1,38 @@
-# React + Vite
+# <img src="./public/favicon.svg" width="32" height="32" valign="middle"/> LenslyStudio
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A premium, browser-based virtual photo booth built with React. LenslyStudio provides a professional photography experience with custom layouts, live filters, and interactive editing tools.
 
-Currently, two official plugins are available:
+[Live Demo](https://lenslystudio.vercel.app)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Key Features
 
-## React Compiler
+- **Multi-Layout Support:** Choose between Photo Strips, 2x2 Grids, or classic Polaroids.
+- **Dynamic Boomerang GIFs:** Capture 3-second looping video clips with automated polishing.
+- **Live Artistic Filters:** Apply Vintage, Neon, and B&W filters in real-time using CSS hardware acceleration.
+- **Interactive Canvas Editor:** Drag, drop, and resize stickers and custom text overlays.
+- **Meme Engine:** Instantly create viral-style memes with specialized font rendering.
+- **High-Res Export:** Download creations as high-quality JPEGs or WebM videos.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Built With
 
-## Expanding the ESLint configuration
+- **Core:** React + Vite
+- **Styling:** Tailwind CSS (Mobile-responsive design)
+- **Icons:** Lucide React
+- **Typography:** Integrated Google Fonts (Poppins, Pacifico, Caveat, Oswald)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Installation & Local Setup
+
+1. Clone the repository:
+   ```bash
+   git clone [https://github.com/amanazeemkhan/LenslyStudio.git](https://github.com/amanazeemkhan/LenslyStudio.git)
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
+---
+### <img src="./public/favicon.svg" width="24" height="24" valign="middle" /> **LenslyStudio** was designed & developed by **[Aman Azeem Khan](https://github.com/amanazeemkhan)**.
