@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import { Aperture, Camera, ChevronRight, Layout, Smile, Video, Zap, X, Settings, Sparkles } from 'lucide-react';
+import { Aperture, Camera, ChevronRight, Layout, Smile, Video, Zap, X, Settings, Sparkles, Wand2 } from 'lucide-react';
 
-
-// --- LANDING PAGE ---
 export default function LandingPage({ onStart }) {
   const [activeModal, setActiveModal] = useState(null); // 'how' or 'features'
 
@@ -28,19 +26,19 @@ export default function LandingPage({ onStart }) {
       {/* Hero Section */}
       <main className="relative z-10 flex-grow flex flex-col items-center justify-center text-center px-4 py-12">
         <div className="inline-block mb-6 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-sm font-medium animate-pulse">
-          ✨ The Ultimate Browser Photo Booth ✨
+          LenslyStudio Photo Booth
         </div>
         
         <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 max-w-4xl leading-tight">
-          Turn Your Camera Into a <br className="hidden md:block"/>
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-400 to-purple-400 animate-gradient">
+          Turn Your Device Into a <br className="hidden md:block"/>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-pink-400 animate-gradient drop-shadow-lg">
             Fun Photo Booth
           </span>
         </h1>
         
         <p className="text-lg md:text-xl text-white/80 max-w-2xl mb-10 leading-relaxed">
           Take fun photos, add wild props, generate classic photo strips, 
-          create hilarious memes, and capture looping GIFs—all in your browser!
+          create hilarious memes, and capture looping GIFs. 
         </p>
         
         <button 
@@ -48,8 +46,8 @@ export default function LandingPage({ onStart }) {
           className="group relative px-8 py-4 bg-white text-purple-900 font-bold text-xl rounded-full shadow-[0_0_40px_rgba(255,255,255,0.3)] hover:shadow-[0_0_60px_rgba(255,255,255,0.5)] transition-all hover:scale-105 active:scale-95 flex items-center gap-3 overflow-hidden"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-pink-200 to-purple-200 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-          <Camera className="relative z-10 animate-bounce" />
-          <span className="relative z-10">Start the Booth</span>
+          <Camera className="relative z-10 animate-pulse" />
+          <span className="relative z-10">Enter the Booth</span>
           <ChevronRight className="relative z-10 group-hover:translate-x-1 transition-transform" />
         </button>
 
