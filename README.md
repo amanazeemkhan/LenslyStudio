@@ -35,4 +35,4 @@ A premium, browser-based virtual photo booth built with React. LenslyStudio prov
    npm run dev
    ```
 ---
-### <img src="./public/favicon.svg" width="24" height="24" valign="middle" /> **LenslyStudio** was designed & developed by **[Aman Azeem Khan](https://github.com/amanazeemkhan)**.
+### <img src="./public/favicon.svg" width="24" height="24" valign="middle" /> **LenslyStudio** - designed & developed by **[Aman Azeem Khan](https://github.com/amanazeemkhan)**.
