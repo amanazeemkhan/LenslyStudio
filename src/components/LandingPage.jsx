@@ -59,8 +59,8 @@ export default function LandingPage({ onStart }) {
             { icon: Video, title: "GIF Mode", desc: "Boomerang loops" },
             { icon: Zap, title: "Meme Generator", desc: "Add epic captions" }
           ].map((feat, i) => (
-            <div key={i} className="bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl p-6 flex flex-col items-center text-center hover:bg-white/20 transition-colors">
-              <div className="p-3 bg-white/20 rounded-full mb-4 text-pink-300">
+            <div key={i} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 flex flex-col items-center text-center cursor-default">
+              <div className="p-3 bg-white/10 rounded-full mb-4 text-pink-300">
                 <feat.icon size={28} />
               </div>
               <h3 className="font-bold text-lg mb-1">{feat.title}</h3>

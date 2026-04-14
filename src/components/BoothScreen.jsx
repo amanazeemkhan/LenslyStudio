@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, Image as ImageIcon, Video, Zap, Timer, Sparkles, X, Layout } from 'lucide-react';
+import { Camera, Image as ImageIcon, Video, Zap, Timer, Sparkles, X, Layout, SwitchCamera, MoreVertical } from 'lucide-react';
 import { POSES, FILTERS } from '../utils/constants';
 
 // --- BOOTH SCREEN (Camera & Capture) ---
@@ -16,20 +16,28 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
   const [flash, setFlash] = useState(false);
   const [currentPose, setCurrentPose] = useState("");
   const [challengeMode, setChallengeMode] = useState(false);
-  const [showPoseModal, setShowPoseModal] = useState(false); // Pose Modal State
-  const [captureProgress, setCaptureProgress] = useState(0); // For strips
-  const [countdownDuration, setCountdownDuration] = useState(3); // 3s or 5s
+  const [showPoseModal, setShowPoseModal] = useState(false); 
+  const [captureProgress, setCaptureProgress] = useState(0); 
+  const [countdownDuration, setCountdownDuration] = useState(3); 
+  const [facingMode, setFacingMode] = useState('user'); 
   
+  const [showTopSettings, setShowTopSettings] = useState(false);
+
   const isRetaking = retakeIndex !== null;
 
   // Initialize Camera
   useEffect(() => {
+    let isMounted = true;
     async function startCamera() {
       try {
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(t => t.stop());
+        }
         const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+          video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: false 
         });
+        if (!isMounted) return;
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -37,23 +45,25 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
         setHasPermission(true);
       } catch (err) {
         console.error("Camera access denied:", err);
-        setHasPermission(false);
+        if (isMounted) setHasPermission(false);
       }
     }
     startCamera();
 
     return () => {
+      isMounted = false;
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
       }
     };
-  }, []);
+  }, [facingMode]);
 
   // Keyboard Shortcut for Spacebar
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.code === 'Space') {
-        e.preventDefault(); // Prevent page scroll
+        e.preventDefault(); 
         if (!isCounting && captureProgress === 0) {
           document.getElementById('capture-btn')?.click();
         }
@@ -70,11 +80,11 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
     canvas.height = videoRef.current.videoHeight;
     const ctx = canvas.getContext('2d');
     
-    // Mirror the image horizontally just like the video preview
-    ctx.translate(canvas.width, 0);
-    ctx.scale(-1, 1);
+    if (facingMode === 'user') {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
     
-    // Apply current filter to canvas
     ctx.filter = filter.canvas;
     ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
     
@@ -111,7 +121,6 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
 
   const handleCapture = async () => {
     if (mode === 'gif' && !isRetaking) {
-      // Record Video
       chunksRef.current = [];
       const stream = streamRef.current;
       const options = { mimeType: 'video/webm' };
@@ -129,22 +138,20 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
         };
 
         await runCountdown(countdownDuration);
-        // Delay to ensure flash completely clears out before recording starts
         await new Promise(r => setTimeout(r, 600)); 
         
         mediaRecorder.start();
-        setCaptureProgress(1); // Indicate recording
+        setCaptureProgress(1); 
         setTimeout(() => {
           if(mediaRecorder.state !== 'inactive') mediaRecorder.stop();
           setCaptureProgress(0);
-        }, 3000); // 3 second GIF
+        }, 3000); 
       } catch (e) {
         console.error("MediaRecorder error", e);
         alert("Video recording not supported in this browser.");
       }
 
     } else {
-      // Photo Capture Logic
       const numPhotos = isRetaking ? 1 : (mode === 'strip' || mode === 'grid' ? 4 : 1);
       const captures = [];
       
@@ -154,7 +161,6 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
         const frame = captureSingleFrame();
         if (frame) captures.push(frame);
         
-        // Short pause between shots if multiple
         if (i < numPhotos - 1) {
           await new Promise(r => setTimeout(r, 1000));
         }
@@ -166,7 +172,7 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
 
   if (hasPermission === false) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center">
+      <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center bg-slate-900 text-white">
         <div className="bg-red-500/20 p-6 rounded-full mb-6">
           <Camera size={48} className="text-red-400" />
         </div>
@@ -182,15 +188,26 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
   }
 
   return (
-    <div className="h-screen w-full flex flex-col bg-black relative">
-      {/* Header Controls */}
-      <div className="absolute top-0 inset-x-0 z-20 p-4 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent">
-        <button onClick={onBack} className="p-2 bg-white/10 hover:bg-white/20 rounded-full backdrop-blur transition-colors">
-          <X size={24} />
+    <div className="h-screen w-full flex flex-col bg-black relative overflow-hidden">
+      
+      {/* Invisible overlay to close dropdown when clicking outside (Z-40) */}
+      {showTopSettings && (
+        <div 
+          className="absolute inset-0 z-40" 
+          onPointerDown={() => setShowTopSettings(false)}
+        />
+      )}
+
+      {/* TOP HEADER CONTROLS (Z-50: Now safely above the invisible overlay!) */}
+      <div className="absolute top-0 inset-x-0 z-50 p-4 flex justify-between items-start bg-gradient-to-b from-black/80 via-black/40 to-transparent pb-10">
+        
+        <button onClick={onBack} className="p-3 bg-white/10 hover:bg-white/20 rounded-full backdrop-blur transition-colors shrink-0 shadow-lg text-white">
+          <X className="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
-        <div className="flex bg-white/10 backdrop-blur-md rounded-full p-1 border border-white/20">
+
+        <div className="flex bg-white/10 backdrop-blur-md rounded-full p-1 border border-white/20 shadow-lg overflow-x-auto scrollbar-hide max-w-[60vw]">
           {isRetaking ? (
-            <div className="px-4 py-2 text-pink-400 font-bold text-sm tracking-wide uppercase">
+            <div className="px-4 py-2 text-pink-400 font-bold text-sm tracking-wide uppercase whitespace-nowrap">
               Retaking Photo #{retakeIndex + 1}
             </div>
           ) : (
@@ -203,52 +220,93 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
               <button
                 key={m.id}
                 onClick={() => setMode(m.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${mode === m.id ? 'bg-white text-black shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
+                className={`flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-medium transition-all shrink-0 ${mode === m.id ? 'bg-white text-black shadow-md' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
               >
-                <m.icon size={16} />
+                <m.icon className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span className="hidden sm:inline">{m.label}</span>
               </button>
             ))
           )}
         </div>
         
-        <div className="flex items-center gap-2">
-          {/* Timer Toggle */}
+        <div className="relative shrink-0">
           <button 
-            onClick={() => setCountdownDuration(d => d === 3 ? 5 : 3)}
-            className={`px-3 py-1.5 rounded-full backdrop-blur transition-all font-bold text-sm border flex items-center gap-1 ${countdownDuration === 5 ? 'bg-pink-500/20 border-pink-500 text-pink-400' : 'bg-white/10 border-white/20 text-white/70 hover:bg-white/20'}`}
-            title="Toggle Countdown Length"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              setShowTopSettings(!showTopSettings);
+            }}
+            className={`p-3 rounded-full backdrop-blur transition-all border shadow-lg flex items-center justify-center ${showTopSettings ? 'bg-white text-black border-white' : 'bg-white/10 border-white/20 text-white/90 hover:bg-white/20'}`}
           >
-            <Timer size={16} /> {countdownDuration}s
+            <MoreVertical className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
 
-          <button 
-            onClick={() => setShowPoseModal(true)}
-            className={`p-2 rounded-full backdrop-blur transition-all ${challengeMode ? 'bg-pink-500 text-white shadow-[0_0_15px_rgba(236,72,153,0.5)]' : 'bg-white/10 text-white/70 hover:bg-white/20'}`}
-            title="Pose Challenge Mode"
-          >
-            <Sparkles size={24} />
-          </button>
+          {/* Settings Dropdown Container */}
+          {showTopSettings && (
+            <div 
+              onPointerDown={(e) => e.stopPropagation()} // Prevents clicks from hitting the overlay
+              className="absolute top-full right-0 mt-3 w-48 bg-slate-900/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 origin-top-right animate-in fade-in zoom-in-95 text-white"
+            >
+              <button 
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+                }}
+                className="flex items-center gap-3 w-full px-3 py-2.5 hover:bg-white/10 rounded-xl transition-colors text-left"
+              >
+                <div className="bg-white/10 p-1.5 rounded-full"><SwitchCamera className="w-4 h-4 text-white" /></div>
+                <span className="text-sm font-medium">Flip Camera</span>
+              </button>
+
+              <button 
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  setCountdownDuration(d => d === 3 ? 5 : 3);
+                }}
+                className="flex items-center gap-3 w-full px-3 py-2.5 hover:bg-white/10 rounded-xl transition-colors text-left"
+              >
+                <div className={`p-1.5 rounded-full transition-colors ${countdownDuration === 5 ? 'bg-pink-500/20 text-pink-400' : 'bg-white/10 text-white'}`}>
+                  <Timer className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-medium transition-all">Timer: {countdownDuration}s</span>
+              </button>
+
+              <button 
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  setShowPoseModal(true); 
+                  setShowTopSettings(false); 
+                }}
+                className="flex items-center gap-3 w-full px-3 py-2.5 hover:bg-white/10 rounded-xl transition-colors text-left"
+              >
+                <div className={`p-1.5 rounded-full ${challengeMode ? 'bg-pink-500/20 text-pink-400' : 'bg-white/10 text-white'}`}>
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium leading-tight">Pose Challenge</span>
+                  <span className="text-[10px] text-white/50 leading-tight">{challengeMode ? 'Enabled' : 'Disabled'}</span>
+                </div>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Main Camera View */}
-      <div className="flex-grow relative overflow-hidden flex items-center justify-center bg-gray-900 border-b border-white/10 z-10">
+      {/* CAMERA FEED AREA */}
+      <div className="flex-grow relative overflow-hidden flex items-center justify-center bg-gray-900 z-10">
         <video 
           ref={videoRef} 
           autoPlay 
           playsInline 
           muted 
-          className="h-full w-full object-cover transform scale-x-[-1]"
+          className={`h-full w-full object-cover ${facingMode === 'user' ? 'transform scale-x-[-1]' : ''}`}
           style={{ filter: filter.css }}
         />
 
-        {/* Flash Overlay */}
+        <div className="absolute bottom-0 inset-x-0 h-32 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
         <div className={`absolute inset-0 bg-white pointer-events-none transition-opacity duration-100 ease-in-out z-50 ${flash ? 'opacity-100' : 'opacity-0'}`} />
 
-        {/* Countdown Overlay */}
         {isCounting && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center z-30 bg-black/40 backdrop-blur-sm">
+          <div className="absolute inset-0 flex flex-col items-center justify-center z-40 bg-black/40 backdrop-blur-sm">
             {challengeMode && currentPose && (
               <div className="mb-8 px-8 py-4 bg-pink-500 text-white text-2xl md:text-4xl font-black uppercase tracking-wider rounded-2xl transform -rotate-2 animate-pulse shadow-2xl text-center">
                 {currentPose}
@@ -260,33 +318,70 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
           </div>
         )}
 
-        {/* Recording Indicator */}
         {mode === 'gif' && !isRetaking && captureProgress === 1 && !isCounting && (
-          <div className="absolute top-20 right-8 flex items-center gap-2 bg-red-500/80 px-4 py-2 rounded-full animate-pulse z-20">
+          <div className="absolute top-24 right-8 flex items-center gap-2 bg-red-500/80 px-4 py-2 rounded-full animate-pulse z-40">
             <div className="w-3 h-3 bg-white rounded-full" />
             <span className="font-bold text-sm tracking-widest">REC</span>
           </div>
         )}
 
-        {/* Capture Progress for Strip */}
         {mode === 'strip' && !isRetaking && captureProgress > 0 && (
-          <div className="absolute top-20 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+          <div className="absolute top-24 left-1/2 -translate-x-1/2 flex gap-2 z-40">
             {[1, 2, 3, 4].map(step => (
               <div key={step} className={`w-3 h-3 rounded-full transition-all ${step < captureProgress ? 'bg-white' : step === captureProgress ? 'bg-pink-400 scale-150 shadow-[0_0_10px_#f472b6]' : 'bg-white/30'}`} />
             ))}
           </div>
         )}
+
+        {/* MODERN FILTER SLIDER */}
+        <div className="absolute bottom-6 inset-x-0 z-30 w-full overflow-x-auto scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="flex items-center md:justify-center gap-3 px-6 md:px-4 w-max min-w-full">
+            {FILTERS.map(f => (
+              <button
+                key={f.name}
+                onClick={() => setFilter(f)}
+                className={`snap-center shrink-0 px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold backdrop-blur-md transition-all border ${filter.name === f.name ? 'bg-white text-black border-white scale-105' : 'bg-black/40 text-white/90 border-white/20 hover:bg-black/60'}`}
+              >
+                {f.name}
+              </button>
+            ))}
+            <div className="w-4 shrink-0 md:hidden" />
+          </div>
+        </div>
       </div>
 
-      {/* Pose Challenge Modal */}
+      {/* SOLID BLACK BOTTOM DECK (Perfectly Centered Content) */}
+      <div className="h-32 sm:h-36 bg-black shrink-0 w-full relative z-20 flex flex-col items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <button 
+            id="capture-btn"
+            onClick={handleCapture}
+            disabled={isCounting || (!isRetaking && captureProgress > 0 && mode !== 'strip')}
+            className="relative group w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center focus:outline-none disabled:opacity-50 disabled:scale-100 transform active:scale-95 transition-transform"
+          >
+            <div className="absolute inset-0 rounded-full border-4 border-white/50 group-hover:border-white transition-colors" />
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full flex items-center justify-center text-black group-hover:scale-95 transition-transform shadow-[0_0_30px_rgba(255,255,255,0.5)]">
+              {mode === 'gif' && !isRetaking ? <Video size={32} /> : <Camera size={32} />}
+            </div>
+          </button>
+          
+          {/* ADDED 'whitespace-nowrap' HERE */}
+          <span className="text-[10px] sm:text-xs font-bold text-white/50 tracking-widest uppercase pointer-events-none whitespace-nowrap">
+            Press Space
+          </span>
+          
+        </div>
+      </div>
+
+      {/* Pose Challenge Modal (Z-60 to sit above everything) */}
       {showPoseModal && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 text-white">
           <div className="bg-slate-900 border border-white/20 p-8 rounded-3xl max-w-sm w-full relative text-center shadow-[0_0_50px_rgba(236,72,153,0.3)]">
             <button onClick={() => setShowPoseModal(false)} className="absolute top-4 right-4 text-white/50 hover:text-white bg-white/10 rounded-full p-2 transition-colors"><X size={20} /></button>
             <div className="w-16 h-16 bg-pink-500/20 text-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
               <Sparkles size={32} />
             </div>
-            <h3 className="text-2xl font-bold mb-2 text-white">Pose Challenge</h3>
+            <h3 className="text-2xl font-bold mb-2">Pose Challenge</h3>
             <p className="text-white/70 mb-8 text-sm leading-relaxed">
               Spice up your photos! We'll give you a fun, random prompt (like "Fake laugh 😂") right before the camera flashes. Get ready!
             </p>
@@ -302,43 +397,6 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
           </div>
         </div>
       )}
-
-      {/* Bottom Controls */}
-      <div className="h-56 bg-black w-full relative z-20 flex flex-col items-center justify-center px-4 pt-4 pb-6 gap-6">
-        {/* Filter Selection - Centered & Aesthetic */}
-        <div className="w-full overflow-x-auto scrollbar-hide">
-          <div className="flex md:justify-center gap-3 snap-x px-4 w-max md:w-full mx-auto">
-            {FILTERS.map(f => (
-              <button
-                key={f.name}
-                onClick={() => setFilter(f)}
-                className={`snap-center shrink-0 px-5 py-2 rounded-full text-sm font-medium border-2 transition-all ${filter.name === f.name ? 'border-pink-500 text-pink-500 bg-pink-500/10' : 'border-white/20 text-white/60 hover:border-white/50 bg-black/50 backdrop-blur'}`}
-              >
-                {f.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Capture Button */}
-        <div className="relative flex flex-col items-center">
-          <button 
-            id="capture-btn"
-            onClick={handleCapture}
-            disabled={isCounting || (!isRetaking && captureProgress > 0 && mode !== 'strip')}
-            className="relative group w-20 h-20 flex items-center justify-center focus:outline-none disabled:opacity-50 disabled:scale-100 transform active:scale-95 transition-transform"
-          >
-            <div className="absolute inset-0 rounded-full border-4 border-white/50 group-hover:border-white transition-colors" />
-            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-black group-hover:scale-95 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.3)]">
-              {mode === 'gif' && !isRetaking ? <Video size={28} /> : <Camera size={28} />}
-            </div>
-          </button>
-          {/* Spacebar Hint */}
-          <span className="absolute -bottom-6 text-[10px] font-bold text-white/50 tracking-widest uppercase pointer-events-none">
-            Press Space
-          </span>
-        </div>
-      </div>
     </div>
   );
 }

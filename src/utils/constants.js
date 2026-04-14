@@ -13,6 +13,11 @@ export const POSES = [
 export const FILTERS = [
   { name: 'Normal', css: 'none', canvas: 'none' },
   { name: 'B & W', css: 'grayscale(100%)', canvas: 'grayscale(100%)' },
+  { name: 'Vibrant', css: 'saturate(200%) contrast(110%)', canvas: 'saturate(200%) contrast(110%)' },
+  { name: 'Golden', css: 'sepia(40%) saturate(150%) contrast(110%) hue-rotate(-15deg)', canvas: 'sepia(40%) saturate(150%) contrast(110%) hue-rotate(-15deg)' },
+  { name: 'Faded', css: 'contrast(80%) brightness(120%) saturate(80%)', canvas: 'contrast(80%) brightness(120%) saturate(80%)' },
+  { name: 'Cyber', css: 'saturate(150%) contrast(120%) hue-rotate(180deg)', canvas: 'saturate(150%) contrast(120%) hue-rotate(180deg)' },
+  { name: 'Noir', css: 'grayscale(100%) contrast(150%) brightness(90%)', canvas: 'grayscale(100%) contrast(150%) brightness(90%)' },
   { name: 'Vintage', css: 'sepia(80%) contrast(120%)', canvas: 'sepia(80%) contrast(120%)' },
   { name: 'Neon', css: 'hue-rotate(90deg) saturate(200%)', canvas: 'hue-rotate(90deg) saturate(200%)' },
   { name: 'Warm', css: 'sepia(30%) saturate(140%) hue-rotate(-10deg)', canvas: 'sepia(30%) saturate(140%) hue-rotate(-10deg)' },

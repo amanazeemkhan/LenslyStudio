@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
-// --- IMPORTING YOUR NEW COMPONENTS ---
+// --- IMPORTING YOUR COMPONENTS ---
 import LandingPage from './components/LandingPage';
 import BoothScreen from './components/BoothScreen';
 import EditorScreen from './components/EditorScreen';
@@ -8,12 +8,42 @@ import ResultScreen from './components/ResultScreen';
 
 // --- MAIN APP COMPONENT ---
 export default function VirtualPhotoBooth() {
-  const [screen, setScreen] = useState('landing'); // landing, booth, editor, result
+  
+  // 1. ALWAYS default to the landing page on a fresh load or refresh
+  const [screen, setScreenState] = useState('landing');
+
+  const setScreen = useCallback((newScreen) => {
+    setScreenState(newScreen);
+    if (window.location.pathname.replace('/', '') !== newScreen) {
+      window.history.pushState(null, '', `/${newScreen}`);
+    }
+  }, []);
+
+  useEffect(() => {
+    // 2. On boot, if the URL is anything other than /landing, force it back to /landing
+    if (window.location.pathname !== '/landing') {
+      window.history.replaceState(null, '', '/landing');
+    }
+
+    // 3. Handle the browser's Back/Forward buttons safely
+    const handlePopState = () => {
+      const path = window.location.pathname.replace('/', '');
+      if (['landing', 'booth', 'editor', 'result'].includes(path)) {
+        setScreenState(path);
+      } else {
+        setScreenState('landing');
+      }
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const [boothMode, setBoothMode] = useState('strip'); // strip, single, meme, gif
   const [capturedImages, setCapturedImages] = useState([]);
   const [gifVideoBlob, setGifVideoBlob] = useState(null);
   const [finalImage, setFinalImage] = useState(null);
-  const [curtainAnim, setCurtainAnim] = useState('idle'); // idle, closing, opening
+  const [curtainAnim, setCurtainAnim] = useState('idle'); // idle, closed, opening
   
   // Single Image Retake State
   const [retakeIndex, setRetakeIndex] = useState(null);
@@ -21,6 +51,18 @@ export default function VirtualPhotoBooth() {
   // Editor State
   const [editorElements, setEditorElements] = useState([]);
   const [selectedLayout, setSelectedLayout] = useState('strip');
+
+  // --- NEW: THE ROUTE GUARD ---
+  // If the app loses its memory (like on a page refresh) while on the editor or result screen,
+  // this instantly catches it and bounces the user safely back to the start.
+  useEffect(() => {
+    if (screen === 'editor' || screen === 'result') {
+      // Check if we are missing both standard photos AND gif blobs
+      if (capturedImages.length === 0 && !gifVideoBlob && !finalImage) {
+        setScreen('landing');
+      }
+    }
+  }, [screen, capturedImages, gifVideoBlob, finalImage, setScreen]);
 
   const resetBooth = () => {
     setCapturedImages([]);
@@ -32,12 +74,16 @@ export default function VirtualPhotoBooth() {
   };
 
   const handleStartBooth = () => {
-    setCurtainAnim('closing');
+    // Snap closed instantly
+    setCurtainAnim('closed');
+    setScreen('booth');
+    
+    // Hold the closed curtain for 400ms so the user actually sees it
     setTimeout(() => {
-      setScreen('booth');
       setCurtainAnim('opening');
-      setTimeout(() => setCurtainAnim('idle'), 700);
-    }, 700);
+      // Wait 1000ms for the elegant sweeping animation to finish
+      setTimeout(() => setCurtainAnim('idle'), 1000);
+    }, 400); 
   };
 
   return (
@@ -47,11 +93,25 @@ export default function VirtualPhotoBooth() {
         {`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Oswald:wght@700&family=Pacifico&family=Poppins:wght@700&display=swap');`}
       </style>
 
-      {/* Red Velvet Curtain Transition Overlay */}
+      {/* Stage Curtain Transition Overlay (Perfect Top-Anchored Sweep) */}
       {curtainAnim !== 'idle' && (
-        <div className="fixed inset-0 z-[100] flex pointer-events-none">
-          <div className={`h-full bg-gradient-to-r from-red-900 via-red-700 to-red-800 transition-all duration-700 ease-in-out ${curtainAnim === 'closing' ? 'w-1/2' : 'w-0'} border-r-8 border-red-950 shadow-[5px_0_20px_rgba(0,0,0,0.8)] relative overflow-hidden`}></div>
-          <div className={`h-full bg-gradient-to-l from-red-900 via-red-700 to-red-800 transition-all duration-700 ease-in-out ${curtainAnim === 'closing' ? 'w-1/2' : 'w-0'} border-l-8 border-red-950 shadow-[-5px_0_20px_rgba(0,0,0,0.8)] relative overflow-hidden ml-auto`}></div>
+        <div className="fixed inset-0 z-[100] flex pointer-events-none overflow-hidden">
+          {/* Left Curtain */}
+          <div 
+            className={`absolute top-0 left-0 h-[120%] w-[55%] bg-gradient-to-r from-red-900 via-red-700 to-red-800 border-r-[12px] border-red-950 shadow-[10px_0_30px_rgba(0,0,0,0.8)] origin-top-left transition-all ease-in-out ${curtainAnim === 'opening' ? 'duration-[1000ms]' : 'duration-0'}`}
+            style={{
+              transform: curtainAnim === 'closed' ? 'scaleX(1) skewX(0deg)' : 'scaleX(0.05) skewX(-30deg)',
+              borderBottomRightRadius: curtainAnim === 'closed' ? '0px' : '100% 100%'
+            }}
+          />
+          {/* Right Curtain */}
+          <div 
+            className={`absolute top-0 right-0 h-[120%] w-[55%] bg-gradient-to-l from-red-900 via-red-700 to-red-800 border-l-[12px] border-red-950 shadow-[-10px_0_30px_rgba(0,0,0,0.8)] origin-top-right transition-all ease-in-out ${curtainAnim === 'opening' ? 'duration-[1000ms]' : 'duration-0'}`}
+            style={{
+              transform: curtainAnim === 'closed' ? 'scaleX(1) skewX(0deg)' : 'scaleX(0.05) skewX(30deg)',
+              borderBottomLeftRadius: curtainAnim === 'closed' ? '0px' : '100% 100%'
+            }}
+          />
         </div>
       )}
 
@@ -67,7 +127,6 @@ export default function VirtualPhotoBooth() {
               setGifVideoBlob(blob);
               setScreen('result');
             } else if (retakeIndex !== null) {
-              // Replace just the specific image in the array
               const newImages = [...capturedImages];
               newImages[retakeIndex] = images[0];
               setCapturedImages(newImages);
@@ -114,7 +173,7 @@ export default function VirtualPhotoBooth() {
           }}
           onRetake={resetBooth}
           onRetakeSingle={(index, currentExpandedImages) => {
-            setCapturedImages(currentExpandedImages); // solidify layout repeating structure
+            setCapturedImages(currentExpandedImages);
             setRetakeIndex(index);
             setScreen('booth');
           }}
