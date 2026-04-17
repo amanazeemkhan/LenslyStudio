@@ -357,7 +357,7 @@ export default function EditorScreen({ images, layout, setLayout, elements, setE
                   type="text" 
                   value={watermarkText}
                   onChange={(e) => setWatermarkText(e.target.value)}
-                  placeholder="e.g. Sarah's 21st 🎉"
+                  placeholder="e.g. Aman's 21st 🎉"
                   className="w-full bg-slate-900 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-pink-500 text-sm"
                 />
               </div>

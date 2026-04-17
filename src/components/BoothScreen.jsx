@@ -75,20 +75,38 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
 
   const captureSingleFrame = () => {
     if (!videoRef.current) return null;
-    const canvas = document.createElement('canvas');
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
-    const ctx = canvas.getContext('2d');
+
+    // STEP 1: Create a temporary canvas for the raw video
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = videoRef.current.videoWidth;
+    tempCanvas.height = videoRef.current.videoHeight;
+    const tempCtx = tempCanvas.getContext('2d');
     
+    // Apply the selfie mirror flip to the raw frame BEFORE filtering
     if (facingMode === 'user') {
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
+      tempCtx.translate(tempCanvas.width, 0);
+      tempCtx.scale(-1, 1);
     }
     
-    ctx.filter = filter.canvas;
-    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+    // Draw the raw, unfiltered video frame (Safari handles this safely)
+    tempCtx.drawImage(videoRef.current, 0, 0, tempCanvas.width, tempCanvas.height);
+
+    // STEP 2: Create the final canvas where the filter will be applied
+    const finalCanvas = document.createElement('canvas');
+    finalCanvas.width = tempCanvas.width;
+    finalCanvas.height = tempCanvas.height;
+    const finalCtx = finalCanvas.getContext('2d');
     
-    return canvas.toDataURL('image/jpeg', 0.9);
+    // Safely apply the selected filter
+    if (filter && filter.canvas && filter.canvas !== 'none') {
+      finalCtx.filter = filter.canvas;
+    }
+    
+    // STEP 3: The "Double Hop" - Draw the STATIC image onto the final canvas
+    finalCtx.drawImage(tempCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
+    
+    // STEP 4: Export the safely filtered image!
+    return finalCanvas.toDataURL('image/jpeg', 0.9);
   };
 
   const triggerFlash = () => {
