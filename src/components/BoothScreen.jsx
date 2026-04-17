@@ -73,39 +73,24 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isCounting, captureProgress]);
 
+  // --- CLEAN, RAW CAPTURE ---
+  // Captures the photo without baking the filter, so the Editor can change it later
   const captureSingleFrame = () => {
     if (!videoRef.current) return null;
-
-    // 1. Create a canvas to hold the RAW frame
     const canvas = document.createElement('canvas');
     canvas.width = videoRef.current.videoWidth;
     canvas.height = videoRef.current.videoHeight;
     const ctx = canvas.getContext('2d');
     
-    // 2. Handle the Selfie Mirror
     if (facingMode === 'user') {
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
     }
     
-    // 3. Draw the video frame RAW first
+    // Draw raw image. No ctx.filter here.
     ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
     
-    // 4. THE RELIABLE IOS FIX: 
-    const resultCanvas = document.createElement('canvas');
-    resultCanvas.width = canvas.width;
-    resultCanvas.height = canvas.height;
-    const resultCtx = resultCanvas.getContext('2d');
-    
-    // Apply the filter to the context via CSS property (the most compatible way)
-    if (filter.canvas !== 'none') {
-      resultCtx.filter = filter.canvas;
-    }
-    
-    // Draw the first canvas onto the second one
-    resultCtx.drawImage(canvas, 0, 0);
-    
-    return resultCanvas.toDataURL('image/jpeg', 0.9);
+    return canvas.toDataURL('image/jpeg', 0.9);
   };
 
   const triggerFlash = () => {
@@ -151,7 +136,8 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
         
         mediaRecorder.onstop = () => {
           const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-          onCaptureComplete([], true, blob);
+          // Pass the currently selected filter to the Editor
+          onCaptureComplete([], true, blob, filter);
         };
 
         await runCountdown(countdownDuration);
@@ -176,14 +162,15 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
         setCaptureProgress(i + 1);
         await runCountdown(countdownDuration);
         const frame = captureSingleFrame();
-        if (frame) captures.push(frame);
+        if (frame) captures.push(frame); // frame is the raw image string
         
         if (i < numPhotos - 1) {
           await new Promise(r => setTimeout(r, 1000));
         }
       }
       setCaptureProgress(0);
-      onCaptureComplete(captures, false, null);
+      // Pass the currently selected filter to the Editor
+      onCaptureComplete(captures, false, null, filter);
     }
   };
 
@@ -207,7 +194,6 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
   return (
     <div className="h-screen w-full flex flex-col bg-black relative overflow-hidden">
       
-      {/* Invisible overlay to close dropdown when clicking outside (Z-40) */}
       {showTopSettings && (
         <div 
           className="absolute inset-0 z-40" 
@@ -215,7 +201,6 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
         />
       )}
 
-      {/* TOP HEADER CONTROLS (Z-50: Now safely above the invisible overlay!) */}
       <div className="absolute top-0 inset-x-0 z-50 p-4 flex justify-between items-start bg-gradient-to-b from-black/80 via-black/40 to-transparent pb-10">
         
         <button onClick={onBack} className="p-3 bg-white/10 hover:bg-white/20 rounded-full backdrop-blur transition-colors shrink-0 shadow-lg text-white">
@@ -257,10 +242,9 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
             <MoreVertical className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
 
-          {/* Settings Dropdown Container */}
           {showTopSettings && (
             <div 
-              onPointerDown={(e) => e.stopPropagation()} // Prevents clicks from hitting the overlay
+              onPointerDown={(e) => e.stopPropagation()}
               className="absolute top-full right-0 mt-3 w-48 bg-slate-900/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 origin-top-right animate-in fade-in zoom-in-95 text-white"
             >
               <button 
@@ -308,7 +292,6 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
         </div>
       </div>
 
-      {/* CAMERA FEED AREA */}
       <div className="flex-grow relative overflow-hidden flex items-center justify-center bg-gray-900 z-10">
         <video 
           ref={videoRef} 
@@ -316,6 +299,7 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
           playsInline 
           muted 
           className={`h-full w-full object-cover ${facingMode === 'user' ? 'transform scale-x-[-1]' : ''}`}
+          // The CSS filter applies visually to the live feed so the user sees it
           style={{ filter: filter.css }}
         />
 
@@ -350,7 +334,6 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
           </div>
         )}
 
-        {/* MODERN FILTER SLIDER */}
         <div className="absolute bottom-6 inset-x-0 z-30 w-full overflow-x-auto scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <div className="flex items-center md:justify-center gap-3 px-6 md:px-4 w-max min-w-full">
             {FILTERS.map(f => (
@@ -367,7 +350,6 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
         </div>
       </div>
 
-      {/* SOLID BLACK BOTTOM DECK (Perfectly Centered Content) */}
       <div className="h-32 sm:h-36 bg-black shrink-0 w-full relative z-20 flex flex-col items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <button 
@@ -382,7 +364,6 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
             </div>
           </button>
           
-          {/* ADDED 'whitespace-nowrap' HERE */}
           <span className="text-[10px] sm:text-xs font-bold text-white/50 tracking-widest uppercase pointer-events-none whitespace-nowrap">
             Press Space
           </span>
@@ -390,7 +371,6 @@ export default function BoothScreen({ mode, setMode, onCaptureComplete, onBack, 
         </div>
       </div>
 
-      {/* Pose Challenge Modal (Z-60 to sit above everything) */}
       {showPoseModal && (
         <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 text-white">
           <div className="bg-slate-900 border border-white/20 p-8 rounded-3xl max-w-sm w-full relative text-center shadow-[0_0_50px_rgba(236,72,153,0.3)]">

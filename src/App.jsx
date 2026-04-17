@@ -52,9 +52,10 @@ export default function VirtualPhotoBooth() {
   const [editorElements, setEditorElements] = useState([]);
   const [selectedLayout, setSelectedLayout] = useState('strip');
 
-  // --- NEW: THE ROUTE GUARD ---
-  // If the app loses its memory (like on a page refresh) while on the editor or result screen,
-  // this instantly catches it and bounces the user safely back to the start.
+  // --- NEW: FILTER STATE FOR APPLE PROGRESSIVE ENHANCEMENT ---
+  const [activeFilter, setActiveFilter] = useState(null);
+
+  // --- THE ROUTE GUARD ---
   useEffect(() => {
     if (screen === 'editor' || screen === 'result') {
       // Check if we are missing both standard photos AND gif blobs
@@ -70,6 +71,7 @@ export default function VirtualPhotoBooth() {
     setFinalImage(null);
     setEditorElements([]);
     setRetakeIndex(null);
+    setActiveFilter(null); // Reset the filter state here!
     setScreen('booth');
   };
 
@@ -122,18 +124,22 @@ export default function VirtualPhotoBooth() {
           mode={boothMode} 
           setMode={setBoothMode} 
           retakeIndex={retakeIndex}
-          onCaptureComplete={(images, isGif, blob) => {
+          // Catching the 4th parameter (filterUsed) here!
+          onCaptureComplete={(images, isGif, blob, filterUsed) => {
             if (isGif) {
               setGifVideoBlob(blob);
+              setActiveFilter(filterUsed); // Save active filter
               setScreen('result');
             } else if (retakeIndex !== null) {
               const newImages = [...capturedImages];
               newImages[retakeIndex] = images[0];
               setCapturedImages(newImages);
+              setActiveFilter(filterUsed); // Save active filter
               setRetakeIndex(null);
               setScreen('editor');
             } else {
               setCapturedImages(images);
+              setActiveFilter(filterUsed); // Save active filter
               setSelectedLayout(
                 boothMode === 'strip' ? 'strip' : 
                 boothMode === 'meme' ? 'single' : 
@@ -167,6 +173,7 @@ export default function VirtualPhotoBooth() {
           setLayout={setSelectedLayout}
           elements={editorElements}
           setElements={setEditorElements}
+          activeFilter={activeFilter} // Passing it securely to the Editor!
           onDone={(finalDataUrl) => {
             setFinalImage(finalDataUrl);
             setScreen('result');

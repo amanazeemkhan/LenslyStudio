@@ -3,11 +3,14 @@ import { RefreshCw, Check, Layout, Wand2, Smile, Type, Type as TextIcon, Setting
 import { FILTERS, LAYOUT_CONFIG, LAYOUTS, BORDER_COLORS, STICKERS, FONTS, CANVAS_BASE_W, CANVAS_BASE_H, CANVAS_PADDING } from '../utils/constants';
 
 // --- EDITOR SCREEN ---
-export default function EditorScreen({ images, layout, setLayout, elements, setElements, onDone, onRetake, onRetakeSingle }) {
+export default function EditorScreen({ images, layout, setLayout, elements, setElements, activeFilter, onDone, onRetake, onRetakeSingle }) {
   const containerRef = useRef(null);
   const [activeTab, setActiveTab] = useState('stickers'); 
   const [activeElementId, setActiveElementId] = useState(null);
-  const [postFilter, setPostFilter] = useState(FILTERS[0]); 
+  
+  // THE FIX: Initialize with the activeFilter from the Booth (fallback to Normal)
+  const [postFilter, setPostFilter] = useState(activeFilter || FILTERS[0]); 
+  
   const [layoutBg, setLayoutBg] = useState('#ffffff');
   const [watermarkText, setWatermarkText] = useState('📸 LenslyStudio');
   
@@ -23,9 +26,13 @@ export default function EditorScreen({ images, layout, setLayout, elements, setE
   const elStart = useRef({ x: 0, y: 0 });
   const lastTap = useRef({ time: 0, id: null });
 
+  // THE FIX: Safely extract the URL whether it's an object {url} or a raw string
   const getDisplayImages = () => {
     const slots = layout === 'strip' || layout === 'grid' ? 4 : 1;
-    return Array.from({ length: slots }).map((_, i) => images[i % images.length] || images[0]);
+    return Array.from({ length: slots }).map((_, i) => {
+      const img = images[i % images.length] || images[0];
+      return img?.url ? img.url : img;
+    });
   };
   const displayImages = getDisplayImages();
 
@@ -150,8 +157,6 @@ export default function EditorScreen({ images, layout, setLayout, elements, setE
     canvas.width = canvasW;
     canvas.height = canvasH;
 
-    // --- NEW: Calculate True Scale Factor ---
-    // This finds out exactly how much larger the high-res Canvas is compared to your mobile screen
     const domRect = containerRef.current.getBoundingClientRect();
     const scaleFactor = canvasW / domRect.width; 
 
@@ -166,6 +171,7 @@ export default function EditorScreen({ images, layout, setLayout, elements, setE
 
     const loadedImgs = await Promise.all(displayImages.map(loadImg));
     
+    // THIS WORKS ON ALL BROWSERS (Even iOS!) because the source is a static Image
     ctx.filter = postFilter.canvas;
 
     if (layout === 'strip') {
@@ -197,7 +203,6 @@ export default function EditorScreen({ images, layout, setLayout, elements, setE
       ctx.translate(xPx, yPx);
       
       if (el.type === 'emoji') {
-        // Multiply by scaleFactor so it blows up perfectly to match the high-res canvas
         const fontSize = el.scale * 40 * scaleFactor; 
         ctx.font = `${fontSize}px sans-serif`;
         ctx.textAlign = 'center';
@@ -205,7 +210,6 @@ export default function EditorScreen({ images, layout, setLayout, elements, setE
         if (el.rotation) ctx.rotate((el.rotation * Math.PI) / 180);
         ctx.fillText(el.content, 0, 0);
       } else if (el.type === 'text') {
-        // Multiply by scaleFactor
         const fontSize = el.scale * 30 * scaleFactor;
         const fontFamily = el.fontFamily || '"Poppins", sans-serif';
         const isMeme = el.isMeme || fontFamily.includes('Impact');
@@ -217,7 +221,7 @@ export default function EditorScreen({ images, layout, setLayout, elements, setE
         ctx.textBaseline = 'middle';
         
         if (isMeme) {
-          ctx.lineWidth = fontSize * 0.15; // Stroke scales up beautifully too!
+          ctx.lineWidth = fontSize * 0.15; 
           ctx.strokeStyle = '#000000';
           ctx.lineJoin = 'round';
           ctx.strokeText(el.content.toUpperCase(), 0, 0);
@@ -439,7 +443,6 @@ export default function EditorScreen({ images, layout, setLayout, elements, setE
               </span>
             </div>
             
-            {/* FIXED MIN AND MAX for absolute tiny control */}
             <div className="flex items-center gap-3 mb-4">
                 <span className="text-xs text-white/50 font-medium">Size</span>
                 <input 
@@ -471,7 +474,6 @@ export default function EditorScreen({ images, layout, setLayout, elements, setE
                   ))}
                 </div>
 
-                {/* Horizontal Scroll Font Selector (Replaces buggy Dropdown) */}
                 <div className="w-full flex overflow-x-auto gap-2 pb-1 pt-1 scrollbar-hide [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                   {FONTS.map(f => (
                     <button
@@ -493,7 +495,6 @@ export default function EditorScreen({ images, layout, setLayout, elements, setE
       {/* Main Preview Area */}
       <div className="flex-grow bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-black/50 p-4 md:p-8 flex flex-col items-center justify-center overflow-auto relative">
         
-        {/* Mobile Top Actions */}
         <div className="md:hidden absolute top-4 inset-x-4 flex justify-between items-start z-30 pointer-events-none">
           <button 
             onClick={() => setIsMobileMenuOpen(true)}
@@ -518,7 +519,6 @@ export default function EditorScreen({ images, layout, setLayout, elements, setE
           </div>
         </div>
         
-        {/* PIXEL-PERFECT PREVIEW CONTAINER */}
         <div 
           ref={containerRef}
           className={`relative shadow-[0_0_40px_rgba(0,0,0,0.5)] transition-all select-none overflow-hidden mt-16 md:mt-0`}
@@ -551,7 +551,6 @@ export default function EditorScreen({ images, layout, setLayout, elements, setE
             ))}
           </div>
 
-          {/* Draggable Overlays */}
           {elements.map(el => {
             const isActive = activeElementId === el.id;
             const elFontFamily = el.fontFamily || '"Poppins", sans-serif';
@@ -570,7 +569,6 @@ export default function EditorScreen({ images, layout, setLayout, elements, setE
                   zIndex: isActive ? 45 : 30
                 }}
               >
-                {/* Contextual Action Buttons */}
                 {isActive && (
                   <>
                     <button 
@@ -588,7 +586,6 @@ export default function EditorScreen({ images, layout, setLayout, elements, setE
                   </>
                 )}
 
-                {/* Element Content */}
                 <div 
                   style={{
                     transform: `rotate(${el.rotation || 0}deg)`,
@@ -619,7 +616,6 @@ export default function EditorScreen({ images, layout, setLayout, elements, setE
         </div>
       </div>
 
-      {/* Mobile Quick-Edit Bottom Sheet */}
       {activeEl && showQuickEdit && (
         <div 
           className="md:hidden fixed inset-x-0 bottom-0 z-[60] bg-slate-900/95 backdrop-blur-xl border-t border-white/20 rounded-t-3xl p-5 shadow-[0_-20px_50px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-full"
@@ -637,7 +633,6 @@ export default function EditorScreen({ images, layout, setLayout, elements, setE
             </button>
           </div>
           
-          {/* FIXED MIN AND MAX for absolute tiny control on mobile */}
           <div className="flex items-center gap-3 mb-4">
               <span className="text-xs text-white/50 font-medium">Size</span>
               <input 
@@ -670,7 +665,6 @@ export default function EditorScreen({ images, layout, setLayout, elements, setE
                   ))}
                 </div>
 
-                {/* Horizontal Scroll Font Selector for Mobile */}
                 <div className="w-full flex overflow-x-auto gap-2 pb-2 pt-1 scrollbar-hide [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                   {FONTS.map(f => (
                     <button
