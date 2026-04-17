@@ -1,6 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, RefreshCw, Download, Printer, Share2 } from 'lucide-react';
 
+// --- UPDATED DATE HELPER FUNCTION (Date + Meaningful Time) ---
+const getFormattedTimestamp = () => {
+  const now = new Date();
+  
+  // Get Date
+  const day = String(now.getDate()).padStart(2, '0');
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const year = now.getFullYear();
+  
+  // Get Time
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+
+  // Returns format: DD-MM-YYYY-HHMMSS)
+  return `${day}-${month}-${year}-${hours}${minutes}${seconds}`; 
+};
+
 // --- RESULT SCREEN ---
 export default function ResultScreen({ finalImage, gifBlob, onRetake, onHome }) {
   const [downloading, setDownloading] = useState(false);
@@ -49,13 +67,17 @@ export default function ResultScreen({ finalImage, gifBlob, onRetake, onHome }) 
   const handleDownload = () => {
     setDownloading(true);
     const link = document.createElement('a');
+    // Generate our beautiful new branded timestamp!
+    const timestamp = getFormattedTimestamp();
+
     if (gifBlob) {
       link.href = gifUrl;
-      link.download = `photobooth-${Date.now()}.webm`;
+      link.download = `LenslyStudio-${timestamp}.webm`;
     } else {
       link.href = finalImage;
-      link.download = `photobooth-${Date.now()}.jpg`;
+      link.download = `LenslyStudio-${timestamp}.jpg`;
     }
+    
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
